@@ -1,5 +1,6 @@
 import smtplib
 import ssl
+import csv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -11,6 +12,14 @@ class Mailer:
     self.smtp_server_domain_name = "smtp.gmail.com"
     self.sender_mail = config.login["email"]
     self.password = config.login["password"]
+
+  def load_emails(self):
+    mailing_list = []
+    with open("mailing-list.csv") as csvfile:
+      reader = csv.DictReader(csvfile)
+      for contact in reader:
+        mailing_list.append(contact)
+    return mailing_list
 
   def send(self, emails):
     ssl_context = ssl.create_default_context()
@@ -36,7 +45,10 @@ class Mailer:
     service.quit()
 
 if __name__ == '__main__':
-    mails = input("Enter emails: ").split()
+    # mails = input("Enter emails: ").split()
 
     mail = Mailer()
-    mail.send(mails)
+    # mail.send(mails)
+    emails = mail.load_emails()
+    for contact in emails:
+      print(contact)
