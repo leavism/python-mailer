@@ -1,6 +1,7 @@
 import smtplib
 import ssl
 import csv
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -13,13 +14,31 @@ class Mailer:
     self.sender_mail = config.login["email"]
     self.password = config.login["password"]
 
+    logging.basicConfig(
+                        format="%(levelname)s: %(message)s",
+                        level=20,
+                        handlers = [
+                          logging.FileHandler("emailing.log"),
+                          logging.StreamHandler()
+                        ]
+    )
+
   def load_emails(self):
     mailing_list = []
     with open("mailing-list.csv") as csvfile:
       reader = csv.DictReader(csvfile)
+      logging.info("Loaded emails")
       for contact in reader:
         mailing_list.append(contact)
     return mailing_list
+
+  def filter_emails(self, mailing_list):
+    for contact in mailing_list:
+      logging.info("Looking at %s" %(contact["Company"]))
+      if contact["Email"]:
+        logging.info("Emailing %s at address %s" %((contact["Contact Name"] or "no name"), contact["Email"]))
+      else:
+        logging.warning("No email for %s- skipping %s" %(contact["Company"], contact["Contact Name"]))
 
   def send(self, emails):
     ssl_context = ssl.create_default_context()
@@ -49,6 +68,5 @@ if __name__ == '__main__':
 
     mail = Mailer()
     # mail.send(mails)
-    emails = mail.load_emails()
-    for contact in emails:
-      print(contact)
+    mailing_list = mail.load_emails()
+    mail.filter_emails(mailing_list)
