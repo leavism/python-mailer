@@ -1,13 +1,13 @@
 from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email import encoders
+from time import sleep
+from pathlib import Path
 import smtplib
 import ssl
 import csv
 import logging
-from time import sleep
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email import encoders
-from pathlib import Path
 
 import config
 
@@ -42,16 +42,17 @@ class Mailer:
   def filter_emails(self, mailing_list):
     """Filters through the mailing list and calls #send on contacts that have an email address. Skips any contacts that doesn't have an email address. Logs everything in the email.log."""
     for contact in mailing_list:
-      logging.info("Looking at %s" %(contact["Company"]))
-      if contact["Email"]:
-        try:
-          logging.info("Emailing {0} at address {1}".format((contact["Contact Name"] or "no name"), contact["Email"]))
-          self.send(contact)
-          sleep(5)
-        except:
-          logging.exception("Uh oh! Something went wrong")
-      else:
+      logging.info("Looking at {0}".format(contact["Company"]))
+      if not contact["Email"]:
         logging.warning("No email for {0}- skipping {1}".format(contact["Company"], contact["Contact Name"]))
+        continue
+
+      try:
+        logging.info("Emailing {0} at address {1}".format((contact["Contact Name"] or "no name"), contact["Email"]))
+        self.send(contact)
+        sleep(5)
+      except:
+        logging.exception("Uh oh! Something went wrong")
 
   def send(self, contact):
     """The actual emailing method."""
@@ -61,23 +62,23 @@ class Mailer:
     
     # Sets subject, from, and to for the email
     mail = MIMEMultipart('alternative')
-    mail['Subject'] = 'SF Hacks 2021-2022 Partnership Opportunity'
+    mail['Subject'] = config.info["email_subject"]
     mail['From'] = self.sender_mail
     mail['To'] = contact["Email"]
 
     # Loads html template
     html_template = ""
-    with open("2022_email_draft.html", "r") as file:
+    with open(config.info["html_template_file_path"], "r") as file:
       html_template = file.read()
 
     # Interpolate inputs into the html template
-    html_template = html_template.format(config.login["sender-name"], config.login["sender-position"], config.login["sender-fullname"])
+    html_template = html_template.format(config.sender["full_name"].split(" ")[0], config.sender["officer_position"], config.sender["full_name"])
 
     # Writes the html template to email body
     html_content = MIMEText(html_template, "html")
     mail.attach(html_content)
 
-    file_path = "2022_sponsorship_brochure.pdf"
+    file_path = config.info["brochure_file_path"]
     mimeBase = MIMEBase("application", "octet-stream")
     with open(file_path, "rb") as file:
       mimeBase.set_payload(file.read())
